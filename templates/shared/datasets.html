@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block title %}Datasets{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+  <div><h1 class="page-title">Financial datasets</h1><p class="page-sub">Choose a dataset to view transactions, results and the network.</p></div>
+  {% if current_user.is_admin %}<a class="btn btn-primary" href="{{ url_for('admin.upload') }}"><i class="bi bi-cloud-arrow-up me-1"></i>Upload dataset</a>{% endif %}
+</div>
+<div class="card">
+  {% if datasets %}
+  <div class="table-responsive"><table class="table table-hover">
+    <thead><tr><th>Dataset</th><th>Source</th><th class="text-end">Records</th><th>Uploaded</th><th>By</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for d in datasets %}
+      <tr><td class="fw-medium"><a href="{{ url_for('analysis.dataset_detail', dataset_id=d.id) }}">{{ d.dataset_name }}</a></td>
+        <td class="small">{{ d.source_name }}</td><td class="text-end tabular">{{ '{:,}'.format(d.total_records) }}</td>
+        <td class="tabular">{{ d.uploaded_date.strftime('%Y-%m-%d %H:%M') }}</td><td class="small">{{ d.uploader.name }}</td>
+        <td><span class="pill {{ 'pill-Normal' if d.status == 'Analyzed' else 'pill-Closed' }}">{{ d.status }}</span></td>
+        <td class="text-end text-nowrap"><a class="btn btn-sm btn-outline-primary" href="{{ url_for('analysis.transactions', dataset_id=d.id) }}">Transactions</a>
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('analysis.results', dataset_id=d.id) }}">Results</a></td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}{{ empty('database', 'No datasets yet.' + (' Upload one to get started.' if current_user.is_admin else ' An administrator needs to upload one.')) }}{% endif %}
+</div>
+{% endblock %}

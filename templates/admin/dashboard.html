@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Admin dashboard{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+  <div><h1 class="page-title">Admin dashboard</h1>
+    <p class="page-sub">{{ '{:,}'.format(summary.datasets) }} datasets · {{ '{:,}'.format(users) }} registered users</p></div>
+  <div class="d-flex gap-2"><a class="btn btn-primary" href="{{ url_for('admin.upload') }}"><i class="bi bi-cloud-arrow-up me-1"></i>Upload dataset</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('analysis.alerts', status='New') }}"><i class="bi bi-bell me-1"></i>Review alerts</a></div>
+</div>
+{% include "shared/_dashboard.html" %}
+{% endblock %}

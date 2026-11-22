@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "macros.html" import risk, pill, score, pagination, empty %}
+{% block title %}Analysis history{% endblock %}
+{% block content %}
+<div class="mb-4"><h1 class="page-title">My analysis history</h1><p class="page-sub">Analyses you started: single transactions and dataset runs.</p></div>
+<div class="card">
+  {% if page.items %}
+  <div class="table-responsive"><table class="table table-hover">
+    <thead><tr><th>Analysed</th><th>Reference</th><th>Transaction date</th><th>Sender → receiver</th><th>Score</th><th>Risk</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for a, t in page.items %}
+      <tr><td class="tabular">{{ a.analyzed_date.strftime('%Y-%m-%d %H:%M') }}</td><td class="mono">{{ t.transaction_reference }}</td>
+        <td class="tabular">{{ t.transaction_date.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td class="mono small">{{ t.sender_id }} → {{ t.receiver_id }}</td>
+        <td style="min-width:140px">{{ score(a.combined_anomaly_score) }}</td><td>{{ risk(a.risk_level) }}</td><td>{{ pill(a.anomaly_status) }}</td>
+        <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('analysis.transaction_detail', tx_id=t.id) }}">Open</a></td></tr>
+    {% endfor %}</tbody></table></div>
+  {{ pagination(page, 'user.history') }}
+  {% else %}{{ empty('clock-history', 'You have not analysed any transactions yet.') }}{% endif %}
+</div>
+{% endblock %}

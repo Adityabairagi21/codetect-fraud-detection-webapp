@@ -1,0 +1,21 @@
+{
+  "stage1_path": "C:\\Users\\ASUS\\CoDetect_Financial_Fraud_Detection",
+  "code": {
+    "feature_engineering.py": "0cae947c72fd413849bdb9f35662a84da1073a55b77570e500547f9faec41ad8",
+    "modeling.py": "388de637ffb44699d5be2359209fa6188c2948eb6c2cbcd5ac891138372dfd52",
+    "fraud_inference.py": "3a2888d63787b473890b08b173b1ed673850790aeb4606301e7e485f19798f46"
+  },
+  "artifacts": {
+    "graph_model.joblib": "67810880ed58a6b1d72ffeaf55a26ac35e30b18bd827e1d38c74f1521b1e6505",
+    "history_tail.joblib": "5b89e4cbc3d95eaa3900017f0ae0e2b65f9998706cde374ae9e15dbe06976d9a",
+    "model_metadata.json": "52416f17be4635220a9b3ce71f524e8a83b280a3596f3b2d7ffbd438df8ad131",
+    "preprocessing.joblib": "e74c7c9834497a7ebcde25433103adfb707468118f4eb24b162d4c51271f3d5a",
+    "scoring_reference.joblib": "c89bc5d5e1d64084f565ef60713cce8df731fb82d2a27bff4179bb8613d635b8",
+    "transaction_model.joblib": "9e8e1463ed5ca946b95291124d8d9784588c94f5d7de3538b26cbb8909d833d6"
+  },
+  "history_context": {
+    "rows": 1345559,
+    "from": "2022-09-08 00:00",
+    "to": "2022-09-10 23:59:00"
+  }
+}

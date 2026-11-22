@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "macros.html" import risk, pill, score, field %}
+{% block title %}Alert #{{ alert.id }}{% endblock %}
+{% block content %}
+<div class="mb-4"><a class="notice" href="{{ url_for('analysis.alerts') }}"><i class="bi bi-arrow-left"></i> Alerts</a>
+  <h1 class="page-title mt-1">Alert #{{ alert.id }} {{ risk(alert.risk_level) }} {{ pill(alert.status) }}</h1>
+  <p class="page-sub">Created {{ alert.created_date.strftime('%Y-%m-%d %H:%M') }}{% if alert.reviewed_date %} · last reviewed {{ alert.reviewed_date.strftime('%Y-%m-%d %H:%M') }} by {{ alert.reviewer.name if alert.reviewer else '—' }}{% endif %}</p></div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3"><div class="card-header">What was flagged</div><div class="card-body">
+      <p>{{ alert.alert_message }}</p>
+      <div class="row g-3 mb-3">
+        <div class="col-sm-4"><div class="notice mb-1">Transaction-only</div>{{ score(a.transaction_anomaly_score) }}</div>
+        <div class="col-sm-4"><div class="notice mb-1">Graph-enhanced</div>{{ score(a.graph_anomaly_score) }}</div>
+        <div class="col-sm-4"><div class="notice mb-1">Combined ({{ a.model_name }})</div>{{ score(a.combined_anomaly_score) }}</div></div>
+      {% for f in a.features %}<div class="explain mb-2"><strong>{{ f.rank }}. {{ f.feature_name }}</strong><div class="small">{{ f.description }}</div></div>{% endfor %}
+      <p class="notice mb-0">An alert is an investigation lead based on unusual behaviour. It is not confirmed fraud.</p>
+    </div></div>
+    <div class="card"><div class="card-header">Transaction</div><div class="card-body"><dl class="row mb-0 small">
+      <dt class="col-4 fw-normal text-muted-2">Reference</dt><dd class="col-8 mono"><a href="{{ url_for('analysis.transaction_detail', tx_id=tx.id) }}">{{ tx.transaction_reference }}</a></dd>
+      <dt class="col-4 fw-normal text-muted-2">Date</dt><dd class="col-8">{{ tx.transaction_date.strftime('%Y-%m-%d %H:%M') }}</dd>
+      <dt class="col-4 fw-normal text-muted-2">Sender → receiver</dt><dd class="col-8 mono">{{ tx.sender_id }} → {{ tx.receiver_id }}</dd>
+      <dt class="col-4 fw-normal text-muted-2">Amount</dt><dd class="col-8">{{ '{:,.2f}'.format(tx.transaction_amount) }} {{ tx.payment_currency }} · {{ tx.transaction_type }}</dd>
+      <dt class="col-4 fw-normal text-muted-2">Dataset</dt><dd class="col-8"><a href="{{ url_for('analysis.dataset_detail', dataset_id=tx.dataset_id) }}">{{ tx.dataset.dataset_name }}</a></dd>
+    </dl>
+    <a class="btn btn-sm btn-outline-secondary mt-3" href="{{ url_for('analysis.graph', dataset=tx.dataset_id, account=tx.sender_id) }}"><i class="bi bi-diagram-3 me-1"></i>Explore sender network</a></div></div>
+  </div>
+  <div class="col-lg-5"><div class="card"><div class="card-header">Investigation</div><div class="card-body">
+    {% if form %}
+    <form method="post" action="{{ url_for('admin.review_alert', alert_id=alert.id) }}" novalidate>{{ form.hidden_tag() }}
+      {{ field(form.status) }}{{ field(form.review_remarks, "What was checked, what was found, next steps…") }}
+      {{ form.submit(class="btn btn-primary") }}</form>
+    {% else %}
+      <p class="small mb-1 text-muted-2">Remarks</p><p>{{ alert.review_remarks or 'No remarks yet.' }}</p>
+      <p class="notice mb-0"><i class="bi bi-lock"></i> Only administrators can change alert status or add remarks.</p>
+    {% endif %}
+  </div></div></div>
+</div>
+{% endblock %}

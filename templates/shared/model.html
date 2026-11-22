@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "macros.html" import chart, empty %}
+{% block title %}Model comparison{% endblock %}
+{% block content %}
+<div class="mb-4"><h1 class="page-title">Transaction-only vs graph-enhanced model</h1>
+  <p class="page-sub">Offline evaluation from the Stage 1 notebook, plus live comparison on the stored results.</p></div>
+{% if not status.ok %}<div class="card">{{ empty('cpu', 'Model artifacts are not loaded: ' ~ status.message) }}</div>{% else %}
+<div class="row g-3 mb-4">
+  <div class="col-lg-5"><div class="card h-100"><div class="card-header">Saved models</div><div class="card-body small">
+    <dl class="row mb-0">
+      <dt class="col-5 fw-normal text-muted-2">Selected (on validation)</dt><dd class="col-7 fw-semibold">{{ status.model_name }}</dd>
+      <dt class="col-5 fw-normal text-muted-2">Version</dt><dd class="col-7 mono">{{ status.version }}</dd>
+      <dt class="col-5 fw-normal text-muted-2">Trained</dt><dd class="col-7">{{ meta.created }}</dd>
+      <dt class="col-5 fw-normal text-muted-2">Encodings</dt><dd class="col-7">Transaction-only: {{ meta.encoding.transaction_only }} · Graph-enhanced: {{ meta.encoding.graph_enhanced }}</dd>
+      <dt class="col-5 fw-normal text-muted-2">Input features</dt><dd class="col-7">{{ meta.input_features.transaction_only|length }} / {{ meta.input_features.graph_enhanced|length }}</dd>
+      <dt class="col-5 fw-normal text-muted-2">History rule</dt><dd class="col-7">{{ meta.history_rule }}</dd>
+      <dt class="col-5 fw-normal text-muted-2">Risk cut-points</dt><dd class="col-7">{% for r in meta.risk_levels %}{{ r.level }} ≥ {{ r.min_score }}{{ ', ' if not loop.last }}{% endfor %}</dd>
+    </dl></div></div></div>
+  <div class="col-lg-7"><div class="card h-100"><div class="card-header">Offline evaluation (IBM AML HI-Small, chronological split)</div>
+    <div class="table-responsive"><table class="table table-sm">
+      <thead><tr><th>Data</th><th>Model</th><th class="text-end">PR-AUC</th><th class="text-end">ROC-AUC</th><th class="text-end">Precision @97</th><th class="text-end">Recall @97</th></tr></thead>
+      <tbody>{% for part in ['validation', 'test'] %}{% for m in meta.metrics[part] %}<tr><td>{{ part }}</td><td>{{ m.model }}</td>
+        <td class="text-end tabular">{{ '%.4f'|format(m.pr_auc) }}</td><td class="text-end tabular">{{ '%.4f'|format(m.roc_auc) }}</td>
+        <td class="text-end tabular">{{ '%.4f'|format(m.suspicious_precision) }}</td><td class="text-end tabular">{{ '%.3f'|format(m.suspicious_recall) }}</td></tr>{% endfor %}{% endfor %}</tbody></table></div>
+    <div class="card-body pt-2 notice">Random ranking gives PR-AUC ≈ prevalence ({{ '%.4f'|format(meta.metrics.test[0].prevalence) }} on test).
+      Both detectors are weak in absolute terms. The graph-enhanced model is consistently better
+      (test PR-AUC difference 95% interval {{ '%+.4f'|format(meta.metrics.test_pr_auc_difference_graph_minus_transaction_95ci[0]) }} to
+      {{ '%+.4f'|format(meta.metrics.test_pr_auc_difference_graph_minus_transaction_95ci[1]) }}).
+      {% if meta.revision_history %}The test days were scored once by an earlier one-hot-only version before the encoding search was added; see the notebook.{% endif %}</div>
+  </div></div>
+</div>
+<div class="card mb-3"><form class="card-header d-flex flex-wrap gap-2 align-items-center" method="get"><span class="me-auto">Live comparison on stored results</span>
+  <select class="form-select form-select-sm w-auto" name="dataset" onchange="this.form.submit()" aria-label="Dataset"><option value="">All datasets</option>
+    {% for d in datasets %}<option value="{{ d.id }}" {{ 'selected' if d.id == ds_id }}>{{ d.dataset_name }}</option>{% endfor %}</select></form>
+  <div class="card-body"><div class="row g-3">
+    <div class="col-lg-6">{{ chart(charts.comparison, 'No analysed transactions yet.', 300) }}</div>
+    <div class="col-lg-6">{% if evaluation and evaluation.models %}<table class="table table-sm">
+      <thead><tr><th>Model</th><th class="text-end">Avg. precision</th><th class="text-end">Recall @97</th><th class="text-end">Precision @97</th></tr></thead>
+      <tbody>{% for m in evaluation.models %}<tr><td>{{ m.model }}</td><td class="text-end tabular">{{ '%.4f'|format(m.average_precision) }}</td>
+        <td class="text-end tabular">{{ '%.3f'|format(m.recall) }}</td><td class="text-end tabular">{{ '%.4f'|format(m.precision) }}</td></tr>{% endfor %}</tbody></table>
+      <p class="notice">Uses the uploaded laundering labels ({{ evaluation.positives }} of {{ '{:,}'.format(evaluation.n) }} rows) for display only. Random ≈ {{ '%.4f'|format(evaluation.prevalence) }}.</p>
+      {% else %}<p class="notice">Upload a dataset that includes the <em>Is Laundering</em> column and analyse it to compare the models against labels here.</p>{% endif %}</div>
+  </div></div></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "macros.html" import empty %}
+{% block title %}Transaction network{% endblock %}
+{% block content %}
+<div class="mb-3"><h1 class="page-title">Financial transaction network</h1>
+  <p class="page-sub">Accounts are nodes and transactions are directed edges. Red edges were scored Suspicious by the saved model.
+    Only a bounded subgraph is drawn.</p></div>
+{% if not datasets %}<div class="card">{{ empty('diagram-3', 'Upload a dataset to explore its network.') }}</div>{% else %}
+<form class="card card-body mb-3" method="get" role="search"><div class="row g-2 align-items-end">
+  <div class="col-md-4"><label class="form-label" for="dataset">Dataset</label>
+    <select class="form-select" id="dataset" name="dataset">{% for d in datasets %}<option value="{{ d.id }}" {{ 'selected' if d.id == ds_id }}>{{ d.dataset_name }}</option>{% endfor %}</select></div>
+  <div class="col-md-5"><label class="form-label" for="account">Account (BANK|ACCOUNT or ACCOUNT)</label>
+    <input class="form-control mono" id="account" name="account" value="{{ account }}" placeholder="Leave empty to see the suspicious-transaction network"></div>
+  <div class="col-md-3 d-flex gap-2"><button class="btn btn-primary flex-grow-1"><i class="bi bi-search me-1"></i>Explore</button>
+    {% if account %}<a class="btn btn-outline-secondary" href="{{ url_for('analysis.graph', dataset=ds_id) }}">Overview</a>{% endif %}</div>
+</div></form>
+<div class="card mb-4"><div class="card-header d-flex flex-wrap justify-content-between gap-2">
+  <span>{{ 'Connections of ' ~ account if account else 'Suspicious transaction network' }}</span>
+  <span class="notice fw-normal" id="network-status" aria-live="polite"></span></div>
+  <div class="card-body p-2"><div id="network" data-url="{{ url_for('analysis.graph_data') }}" data-dataset="{{ ds_id }}" data-account="{{ account }}"></div></div></div>
+<div class="row g-3">
+  {% if account %}
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Connected accounts</div>
+    {% if connected %}<div class="table-responsive"><table class="table table-sm table-hover">
+      <thead><tr><th>Account</th><th class="text-end">Paid to</th><th class="text-end">Received from</th><th class="text-end">Suspicious</th><th>Currencies</th></tr></thead>
+      <tbody>{% for c in connected[:40] %}<tr><td class="mono small"><a href="{{ url_for('analysis.graph', dataset=ds_id, account=c.account) }}">{{ c.account }}</a></td>
+        <td class="text-end tabular">{{ c.sent_to }}</td><td class="text-end tabular">{{ c.received_from }}</td>
+        <td class="text-end tabular {{ 'text-danger fw-semibold' if c.suspicious }}">{{ c.suspicious }}</td><td class="small">{{ c.currencies }}</td></tr>{% endfor %}</tbody></table></div>
+    {% else %}{{ empty('person-x', 'No transactions for this account in the dataset.') }}{% endif %}</div></div>
+  {% endif %}
+  <div class="{{ 'col-lg-6' if account else 'col-12' }}"><div class="card h-100"><div class="card-header">Suspicious account relationships</div>
+    {% if relationships %}<div class="table-responsive"><table class="table table-sm table-hover">
+      <thead><tr><th>Sender</th><th>Receiver</th><th class="text-end">Suspicious transactions</th><th class="text-end">Max score</th><th>Period</th></tr></thead>
+      <tbody>{% for r in relationships %}<tr>
+        <td class="mono small"><a href="{{ url_for('analysis.graph', dataset=ds_id, account=r.sender) }}">{{ r.sender }}</a></td>
+        <td class="mono small"><a href="{{ url_for('analysis.graph', dataset=ds_id, account=r.receiver) }}">{{ r.receiver }}</a></td>
+        <td class="text-end tabular">{{ r.count }}</td><td class="text-end tabular">{{ '%.1f'|format(r.max_score) }}</td>
+        <td class="small tabular text-nowrap">{{ r.first.strftime('%H:%M') }}{% if r.last != r.first %}–{{ r.last.strftime('%H:%M') }}{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+    {% else %}{{ empty('diagram-2', 'No suspicious relationships yet. Run fraud detection first.') }}{% endif %}</div></div>
+</div>
+{% endif %}
+{% endblock %}

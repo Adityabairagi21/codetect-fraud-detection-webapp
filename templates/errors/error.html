@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block charts_js %}{% endblock %}
+{% macro body() %}
+<div class="empty-state py-5">
+  <div class="display-5 fw-bold text-muted-2">{{ code }}</div>
+  <h1 class="h4 mt-2">{{ title }}</h1>
+  <p class="text-muted-2">{{ message }}</p>
+  <a class="btn btn-primary mt-2" href="{{ url_for('index') }}">Back to CoDetect</a>
+</div>
+{% endmacro %}
+{% block content %}{{ body() }}{% endblock %}
+{% block public %}<div class="container py-5">{{ body() }}</div>{% endblock %}

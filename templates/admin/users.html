@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "macros.html" import pill, pagination, empty %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+  <div><h1 class="page-title">Registered users</h1><p class="page-sub">{{ '{:,}'.format(page.total) }} accounts{% if q %} matching "{{ q }}"{% endif %}</p></div>
+  <form class="d-flex gap-2" method="get" role="search">
+    <input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Name, email or mobile" aria-label="Search users">
+    <button class="btn btn-primary"><i class="bi bi-search"></i></button>
+    {% if q %}<a class="btn btn-outline-secondary" href="{{ url_for('admin.users') }}">Clear</a>{% endif %}
+  </form>
+</div>
+<div class="card">
+  {% if page.items %}
+  <div class="table-responsive"><table class="table table-hover">
+    <thead><tr><th>Name</th><th>Email</th><th>Mobile</th><th>Role</th><th>Registered</th><th>Status</th><th class="text-end">Action</th></tr></thead>
+    <tbody>{% for u in page.items %}
+      <tr><td class="fw-medium">{{ u.name }}</td><td>{{ u.email }}</td><td>{{ u.mobile_number or '—' }}</td><td>{{ u.user_type }}</td>
+        <td class="tabular">{{ u.registered_date.strftime('%d %b %Y') }}</td><td>{{ pill(u.status) }}</td>
+        <td class="text-end">{% if u.id != current_user.id %}
+          <form method="post" action="{{ url_for('admin.toggle_user', user_id=u.id) }}" class="d-inline">{{ form.hidden_tag() }}
+            <button class="btn btn-sm {{ 'btn-outline-danger' if u.status == 'Active' else 'btn-outline-success' }}">{{ 'Deactivate' if u.status == 'Active' else 'Activate' }}</button></form>
+          {% else %}<span class="notice">you</span>{% endif %}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {{ pagination(page, 'admin.users') }}
+  {% else %}{{ empty('people', 'No users match this search.') }}{% endif %}
+</div>
+{% endblock %}

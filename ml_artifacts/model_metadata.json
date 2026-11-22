@@ -1,0 +1,599 @@
+{
+  "project": "CoDetect - Financial Fraud Detection With Anomaly Feature Detection",
+  "created": "2026-11-21T23:11:09",
+  "run_mode": "quick",
+  "random_seed": 42,
+  "library_versions": {
+    "python": "3.12.10",
+    "pandas": "3.1.1",
+    "numpy": "2.5.5",
+    "scikit-learn": "1.9.1",
+    "joblib": "1.6.0",
+    "networkx": "3.7",
+    "matplotlib": "3.11.2",
+    "seaborn": "0.13.2",
+    "plotly": "7.1.0"
+  },
+  "dataset": {
+    "name": "IBM AML HI-Small",
+    "file": "HI-Small_Trans.csv",
+    "sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040",
+    "source": "https://www.kaggle.com/datasets/ealtman2019/ibm-transactions-for-anti-money-laundering-aml",
+    "official_project": "https://github.com/IBM/AML-Data",
+    "licence": "CDLA-Sharing-1.0",
+    "column_map": {
+      "timestamp": "Timestamp",
+      "sender_bank": "From Bank",
+      "sender_account": "Account",
+      "receiver_bank": "To Bank",
+      "receiver_account": "Account.1",
+      "amount_received": "Amount Received",
+      "receiving_currency": "Receiving Currency",
+      "amount_paid": "Amount Paid",
+      "payment_currency": "Payment Currency",
+      "payment_format": "Payment Format",
+      "label": "Is Laundering"
+    },
+    "cleaning_report": {
+      "input_rows": 5078345,
+      "invalid_timestamp": 0,
+      "invalid_amount": 0,
+      "invalid_account_id": 0,
+      "missing_category": 0,
+      "dropped_invalid": 0,
+      "dropped_exact_duplicates": 9,
+      "output_rows": 5078336
+    },
+    "split_windows": {
+      "warmup": [
+        "2022-09-01",
+        "2022-09-02"
+      ],
+      "train": [
+        "2022-09-02",
+        "2022-09-07"
+      ],
+      "validation": [
+        "2022-09-07",
+        "2022-09-09"
+      ],
+      "test": [
+        "2022-09-09",
+        "2022-09-11"
+      ]
+    },
+    "split_counts": {
+      "warmup": {
+        "rows": 1114919,
+        "laundering": 322
+      },
+      "train": {
+        "rows": 2134000,
+        "laundering": 2208
+      },
+      "validation": {
+        "rows": 965521,
+        "laundering": 1036
+      },
+      "test": {
+        "rows": 862788,
+        "laundering": 956
+      },
+      "excluded": {
+        "rows": 1108,
+        "laundering": 655
+      }
+    }
+  },
+  "feature_version": "2.0.0",
+  "history_window_minutes": 1440,
+  "history_rule": "features of a transaction at minute m use only transactions in [m-1440, m-1]",
+  "feature_schema": [
+    {
+      "name": "amount_usd",
+      "group": "transaction",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Amount paid, converted to US Dollar with dataset-implied FX rates"
+    },
+    {
+      "name": "hour",
+      "group": "transaction",
+      "kind": "numeric",
+      "transform": null,
+      "description": "Hour of day (0-23) of the transaction"
+    },
+    {
+      "name": "payment_format",
+      "group": "transaction",
+      "kind": "categorical",
+      "transform": "onehot",
+      "description": "Transaction type / payment format"
+    },
+    {
+      "name": "payment_currency",
+      "group": "transaction",
+      "kind": "categorical",
+      "transform": "onehot",
+      "description": "Currency the sender paid in"
+    },
+    {
+      "name": "is_cross_currency",
+      "group": "transaction",
+      "kind": "binary",
+      "transform": null,
+      "description": "1 if paid and received currencies differ"
+    },
+    {
+      "name": "is_self_transfer",
+      "group": "transaction",
+      "kind": "binary",
+      "transform": null,
+      "description": "1 if sender and receiver are the same account"
+    },
+    {
+      "name": "sender_out_count_24h",
+      "group": "transaction",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Transactions sent by the sender in the previous 24 hours"
+    },
+    {
+      "name": "receiver_in_count_24h",
+      "group": "transaction",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Transactions received by the receiver in the previous 24 hours"
+    },
+    {
+      "name": "sender_amount_deviation_24h",
+      "group": "transaction",
+      "kind": "numeric",
+      "transform": null,
+      "description": "log(1+amount) minus the mean log(1+amount) of the sender's payments in the previous 24 hours (0 when there are none)"
+    },
+    {
+      "name": "sender_amount_std_24h",
+      "group": "transaction",
+      "kind": "numeric",
+      "transform": null,
+      "description": "Std of log(1+amount) of the sender's payments in the previous 24 hours (0 if fewer than 2)"
+    },
+    {
+      "name": "pair_count_24h",
+      "group": "transaction",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Transactions from this sender to this receiver in the previous 24 hours"
+    },
+    {
+      "name": "sender_in_degree_24h",
+      "group": "graph",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Distinct accounts that paid the sender in the previous 24 hours"
+    },
+    {
+      "name": "sender_out_degree_24h",
+      "group": "graph",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Distinct accounts the sender paid in the previous 24 hours"
+    },
+    {
+      "name": "receiver_in_degree_24h",
+      "group": "graph",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Distinct accounts that paid the receiver in the previous 24 hours"
+    },
+    {
+      "name": "receiver_out_degree_24h",
+      "group": "graph",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Distinct accounts the receiver paid in the previous 24 hours"
+    },
+    {
+      "name": "sender_counterparties_24h",
+      "group": "graph",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Distinct accounts connected to the sender (either direction) in the previous 24 hours"
+    },
+    {
+      "name": "receiver_counterparties_24h",
+      "group": "graph",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Distinct accounts connected to the receiver (either direction) in the previous 24 hours"
+    },
+    {
+      "name": "sender_txn_count_24h",
+      "group": "graph",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Transactions involving the sender (sent + received) in the previous 24 hours"
+    },
+    {
+      "name": "receiver_txn_count_24h",
+      "group": "graph",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "Transactions involving the receiver (sent + received) in the previous 24 hours"
+    },
+    {
+      "name": "sender_volume_24h",
+      "group": "graph",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "USD volume through the sender (sent + received) in the previous 24 hours"
+    },
+    {
+      "name": "receiver_volume_24h",
+      "group": "graph",
+      "kind": "numeric",
+      "transform": "log1p",
+      "description": "USD volume through the receiver (sent + received) in the previous 24 hours"
+    }
+  ],
+  "model_features": {
+    "transaction_only": [
+      "amount_usd",
+      "hour",
+      "payment_format",
+      "payment_currency",
+      "is_cross_currency",
+      "is_self_transfer",
+      "sender_out_count_24h",
+      "receiver_in_count_24h",
+      "sender_amount_deviation_24h",
+      "sender_amount_std_24h",
+      "pair_count_24h"
+    ],
+    "graph_enhanced": [
+      "amount_usd",
+      "hour",
+      "payment_format",
+      "payment_currency",
+      "is_cross_currency",
+      "is_self_transfer",
+      "sender_out_count_24h",
+      "receiver_in_count_24h",
+      "sender_amount_deviation_24h",
+      "sender_amount_std_24h",
+      "pair_count_24h",
+      "sender_in_degree_24h",
+      "sender_out_degree_24h",
+      "receiver_in_degree_24h",
+      "receiver_out_degree_24h",
+      "sender_counterparties_24h",
+      "receiver_counterparties_24h",
+      "sender_txn_count_24h",
+      "receiver_txn_count_24h",
+      "sender_volume_24h",
+      "receiver_volume_24h"
+    ]
+  },
+  "encoding": {
+    "transaction_only": "onehot",
+    "graph_enhanced": "numeric_only"
+  },
+  "input_features": {
+    "transaction_only": [
+      "amount_usd",
+      "hour",
+      "payment_format",
+      "payment_currency",
+      "is_cross_currency",
+      "is_self_transfer",
+      "sender_out_count_24h",
+      "receiver_in_count_24h",
+      "sender_amount_deviation_24h",
+      "sender_amount_std_24h",
+      "pair_count_24h"
+    ],
+    "graph_enhanced": [
+      "amount_usd",
+      "hour",
+      "sender_out_count_24h",
+      "receiver_in_count_24h",
+      "sender_amount_deviation_24h",
+      "sender_amount_std_24h",
+      "pair_count_24h",
+      "sender_in_degree_24h",
+      "sender_out_degree_24h",
+      "receiver_in_degree_24h",
+      "receiver_out_degree_24h",
+      "sender_counterparties_24h",
+      "receiver_counterparties_24h",
+      "sender_txn_count_24h",
+      "receiver_txn_count_24h",
+      "sender_volume_24h",
+      "receiver_volume_24h"
+    ]
+  },
+  "encoded_features": {
+    "transaction_only": [
+      "amount_usd",
+      "sender_out_count_24h",
+      "receiver_in_count_24h",
+      "pair_count_24h",
+      "hour",
+      "is_cross_currency",
+      "is_self_transfer",
+      "sender_amount_deviation_24h",
+      "sender_amount_std_24h",
+      "payment_format_ACH",
+      "payment_format_Bitcoin",
+      "payment_format_Cash",
+      "payment_format_Cheque",
+      "payment_format_Credit Card",
+      "payment_format_Wire",
+      "payment_currency_Australian Dollar",
+      "payment_currency_Bitcoin",
+      "payment_currency_Brazil Real",
+      "payment_currency_Canadian Dollar",
+      "payment_currency_Euro",
+      "payment_currency_Mexican Peso",
+      "payment_currency_Ruble",
+      "payment_currency_Rupee",
+      "payment_currency_Saudi Riyal",
+      "payment_currency_Shekel",
+      "payment_currency_Swiss Franc",
+      "payment_currency_UK Pound",
+      "payment_currency_US Dollar",
+      "payment_currency_Yen",
+      "payment_currency_Yuan"
+    ],
+    "graph_enhanced": [
+      "amount_usd",
+      "sender_out_count_24h",
+      "receiver_in_count_24h",
+      "pair_count_24h",
+      "sender_in_degree_24h",
+      "sender_out_degree_24h",
+      "receiver_in_degree_24h",
+      "receiver_out_degree_24h",
+      "sender_counterparties_24h",
+      "receiver_counterparties_24h",
+      "sender_txn_count_24h",
+      "receiver_txn_count_24h",
+      "sender_volume_24h",
+      "receiver_volume_24h",
+      "hour",
+      "sender_amount_deviation_24h",
+      "sender_amount_std_24h"
+    ]
+  },
+  "required_input_columns": [
+    "timestamp",
+    "sender_bank",
+    "sender_account",
+    "receiver_bank",
+    "receiver_account",
+    "amount_received",
+    "receiving_currency",
+    "amount_paid",
+    "payment_currency",
+    "payment_format"
+  ],
+  "hyperparameters": {
+    "transaction_only": {
+      "n_estimators": 200,
+      "max_samples": 256,
+      "max_features": 1.0,
+      "contamination": "auto",
+      "fit_rows": 300000
+    },
+    "graph_enhanced": {
+      "n_estimators": 200,
+      "max_samples": 256,
+      "max_features": 0.6,
+      "contamination": "auto",
+      "fit_rows": 300000
+    }
+  },
+  "hyperparameter_grid": {
+    "encodings": [
+      "onehot",
+      "frequency",
+      "numeric_only"
+    ],
+    "settings": [
+      {
+        "max_samples": 256,
+        "max_features": 1.0
+      },
+      {
+        "max_samples": 256,
+        "max_features": 0.6
+      },
+      {
+        "max_samples": 2048,
+        "max_features": 1.0
+      },
+      {
+        "max_samples": 2048,
+        "max_features": 0.6
+      }
+    ]
+  },
+  "revision_history": [
+    {
+      "version": "v1",
+      "change": "one-hot encoding only",
+      "note": "test days scored once; results archived unopened in outputs/archive/v1_onehot before revision"
+    },
+    {
+      "version": "v2",
+      "change": "encoding (onehot / frequency / numeric_only) added to the validation search",
+      "reason": "v1 validation: Isolation Forest isolated rare currencies, cross-currency and self-transfer values first; labelled laundering is common-looking on those columns"
+    }
+  ],
+  "score_convention": {
+    "raw": "-IsolationForest.score_samples (higher = more abnormal)",
+    "anomaly_score": "percentile (0-100) of raw score among training-period raw scores",
+    "note": "an anomaly score is a rarity rank, not a fraud probability"
+  },
+  "risk_levels": [
+    {
+      "level": "Low",
+      "min_score": 0.0
+    },
+    {
+      "level": "Medium",
+      "min_score": 90.0
+    },
+    {
+      "level": "High",
+      "min_score": 97.0
+    },
+    {
+      "level": "Critical",
+      "min_score": 99.5
+    }
+  ],
+  "suspicious_levels": [
+    "High",
+    "Critical"
+  ],
+  "abnormal_feature_method": "-log10 tail probability vs training reference sample; top 3 per suspicious transaction",
+  "selected_model": "graph_enhanced",
+  "selection": {
+    "selected_model": "graph_enhanced",
+    "criterion": "highest validation PR-AUC",
+    "validation_pr_auc": {
+      "transaction_only": 0.0013353171219821938,
+      "graph_enhanced": 0.0017600879791559072
+    },
+    "pr_auc_difference_graph_minus_transaction_95ci": [
+      0.00033991337382301704,
+      0.0005259734236287371
+    ],
+    "pr_auc_difference_graph_minus_transaction_median": 0.0004311681360711573
+  },
+  "combined_anomaly_score": "anomaly score of the selected model",
+  "metrics": {
+    "validation": [
+      {
+        "model": "Transaction-only IF",
+        "data": "validation",
+        "transactions": 965521,
+        "laundering": 1036,
+        "prevalence": 0.0010729958229805463,
+        "pr_auc": 0.0013353171219821938,
+        "roc_auc": 0.6248106092108332,
+        "suspicious_precision": 0.0001658649859014762,
+        "suspicious_recall": 0.004826254826254826,
+        "suspicious_f1": 0.0003207081235367692,
+        "suspicious_flagged": 30145,
+        "suspicious_tp": 5,
+        "suspicious_fp": 30140,
+        "suspicious_fn": 1031,
+        "suspicious_tn": 934345,
+        "critical_precision": 0.0,
+        "critical_recall": 0.0,
+        "critical_f1": 0.0,
+        "critical_flagged": 4442,
+        "critical_tp": 0,
+        "critical_fp": 4442,
+        "critical_fn": 1036,
+        "critical_tn": 960043
+      },
+      {
+        "model": "Graph-enhanced IF",
+        "data": "validation",
+        "transactions": 965521,
+        "laundering": 1036,
+        "prevalence": 0.0010729958229805463,
+        "pr_auc": 0.0017600879791559072,
+        "roc_auc": 0.7007672603517796,
+        "suspicious_precision": 0.0010670731707317074,
+        "suspicious_recall": 0.013513513513513514,
+        "suspicious_f1": 0.0019779598756710934,
+        "suspicious_flagged": 13120,
+        "suspicious_tp": 14,
+        "suspicious_fp": 13106,
+        "suspicious_fn": 1022,
+        "suspicious_tn": 951379,
+        "critical_precision": 0.0,
+        "critical_recall": 0.0,
+        "critical_f1": 0.0,
+        "critical_flagged": 294,
+        "critical_tp": 0,
+        "critical_fp": 294,
+        "critical_fn": 1036,
+        "critical_tn": 964191
+      }
+    ],
+    "test": [
+      {
+        "model": "Transaction-only IF",
+        "data": "test",
+        "transactions": 862788,
+        "laundering": 956,
+        "prevalence": 0.0011080358094920188,
+        "pr_auc": 0.001387684704490796,
+        "roc_auc": 0.6245673891592458,
+        "suspicious_precision": 0.00012020675561966583,
+        "suspicious_recall": 0.0031380753138075313,
+        "suspicious_f1": 0.00023154401265773936,
+        "suspicious_flagged": 24957,
+        "suspicious_tp": 3,
+        "suspicious_fp": 24954,
+        "suspicious_fn": 953,
+        "suspicious_tn": 836878,
+        "critical_precision": 0.0,
+        "critical_recall": 0.0,
+        "critical_f1": 0.0,
+        "critical_flagged": 4129,
+        "critical_tp": 0,
+        "critical_fp": 4129,
+        "critical_fn": 956,
+        "critical_tn": 857703
+      },
+      {
+        "model": "Graph-enhanced IF",
+        "data": "test",
+        "transactions": 862788,
+        "laundering": 956,
+        "prevalence": 0.0011080358094920188,
+        "pr_auc": 0.0017029807419848694,
+        "roc_auc": 0.6685393190922161,
+        "suspicious_precision": 0.0012908777969018934,
+        "suspicious_recall": 0.0502092050209205,
+        "suspicious_f1": 0.0025170424750917673,
+        "suspicious_flagged": 37184,
+        "suspicious_tp": 48,
+        "suspicious_fp": 37136,
+        "suspicious_fn": 908,
+        "suspicious_tn": 824696,
+        "critical_precision": 0.0005749604714675866,
+        "critical_recall": 0.0041841004184100415,
+        "critical_f1": 0.0010109945659042083,
+        "critical_flagged": 6957,
+        "critical_tp": 4,
+        "critical_fp": 6953,
+        "critical_fn": 952,
+        "critical_tn": 854879
+      }
+    ],
+    "test_pr_auc_difference_graph_minus_transaction_95ci": [
+      0.00023377600499420578,
+      0.0004689307681050059
+    ]
+  },
+  "history_tail": {
+    "rows": 208325,
+    "from": "2022-09-10 00:00:00",
+    "to": "2022-09-10 23:59:00"
+  },
+  "artifact_sha256": {
+    "transaction_model.joblib": "9e8e1463ed5ca946b95291124d8d9784588c94f5d7de3538b26cbb8909d833d6",
+    "graph_model.joblib": "67810880ed58a6b1d72ffeaf55a26ac35e30b18bd827e1d38c74f1521b1e6505",
+    "preprocessing.joblib": "e74c7c9834497a7ebcde25433103adfb707468118f4eb24b162d4c51271f3d5a",
+    "scoring_reference.joblib": "c89bc5d5e1d64084f565ef60713cce8df731fb82d2a27bff4179bb8613d635b8",
+    "history_tail.joblib": "5b89e4cbc3d95eaa3900017f0ae0e2b65f9998706cde374ae9e15dbe06976d9a"
+  }
+}

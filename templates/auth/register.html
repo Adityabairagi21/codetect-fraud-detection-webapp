@@ -1,0 +1,17 @@
+{% extends "auth/_layout.html" %}
+{% from "macros.html" import field %}
+{% block title %}Register{% endblock %}
+{% block form %}
+<h2 class="fw-bold mb-1">Create an analyst account</h2>
+<p class="text-muted-2 mb-4">Analysts can view datasets, analyse transactions, explore the network and download reports.</p>
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.name) }}
+  {{ field(form.email, "you@example.com") }}
+  {{ field(form.mobile_number, "+91 98765 43210", "Optional") }}
+  {{ field(form.password, "", "At least 8 characters, with letters and digits.") }}
+  {{ field(form.confirm) }}
+  {{ form.submit(class="btn btn-primary w-100 py-2") }}
+</form>
+<p class="mt-4 text-center notice">Already registered? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+{% endblock %}

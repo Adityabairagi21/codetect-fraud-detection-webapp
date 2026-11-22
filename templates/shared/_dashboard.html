@@ -1,0 +1,39 @@
+{% from "macros.html" import chart %}
+<form class="d-flex gap-2 align-items-center mb-4 flex-wrap" method="get">
+  <label class="notice" for="dataset-filter">Scope</label>
+  <select id="dataset-filter" name="dataset" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+    <option value="">All datasets</option>
+    {% for d in datasets %}<option value="{{ d.id }}" {{ 'selected' if selected == d.id }}>{{ d.dataset_name }}</option>{% endfor %}
+  </select>
+  <noscript><button class="btn btn-sm btn-outline-secondary">Apply</button></noscript>
+</form>
+<div class="row g-3 mb-4">
+  {% set tiles = [
+    ("Transactions", summary.transactions, "bi-receipt", "stored in MySQL"),
+    ("Analysed", summary.analyzed, "bi-cpu", "with the current model version"),
+    ("Suspicious", summary.suspicious, "bi-exclamation-octagon", "%.2f%% of analysed · High + Critical"|format(summary.suspicious_share)),
+    ("Open alerts", summary.open_alerts, "bi-bell", "%s critical-risk analyses"|format('{:,}'.format(summary.critical)))] %}
+  {% for label, value, icon, sub in tiles %}
+  <div class="col-6 col-xl-3"><div class="card stat-tile h-100">
+    <div class="label"><i class="bi {{ icon }}"></i>{{ label }}</div>
+    <div class="value tabular">{{ '{:,}'.format(value or 0) }}</div><div class="sub">{{ sub }}</div>
+  </div></div>
+  {% endfor %}
+</div>
+{% if not summary.analyzed %}
+<div class="alert alert-info">No analysis results yet.
+  {% if current_user.is_admin %}Open a dataset and choose <strong>Run fraud detection</strong>.{% else %}Open a transaction and choose <strong>Analyse transaction</strong>, or ask an administrator to run detection on a dataset.{% endif %}</div>
+{% endif %}
+<div class="row g-3">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Risk-level distribution</div><div class="card-body">{{ chart(charts.risk, "Run fraud detection to see risk levels.") }}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Normal vs suspicious</div><div class="card-body">{{ chart(charts.status, "No analysed transactions yet.") }}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Transactions by type</div><div class="card-body">{{ chart(charts.by_type, "Upload a dataset to see transaction types.") }}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Transaction amount distribution</div><div class="card-body">{{ chart(charts.amounts, "No transactions yet.") }}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Detection trend</div><div class="card-body">{{ chart(charts.trend, "No analysed transactions yet.") }}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Anomaly score distribution</div><div class="card-body">{{ chart(charts.scores, "No analysed transactions yet.") }}
+    <p class="notice mb-0 mt-2">The score is the percentile of a transaction's unusualness among training transactions. It is not a fraud probability.</p></div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Top abnormal features</div><div class="card-body">{{ chart(charts.features, "Abnormal features appear once suspicious transactions are found.", 320) }}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header d-flex justify-content-between">Transaction-only vs graph-enhanced<a class="small fw-normal" href="{{ url_for('analysis.model_info') }}">Details</a></div>
+    <div class="card-body">{{ chart(charts.comparison, "No analysed transactions yet.", 320) }}
+    {% if charts.comparison %}<p class="notice mb-0 mt-2">{{ '{:,}'.format(charts.comparison_overlap) }} transactions are flagged by both models.</p>{% endif %}</div></div></div>
+</div>

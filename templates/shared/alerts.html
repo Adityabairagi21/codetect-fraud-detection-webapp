@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "macros.html" import risk, pill, pagination, empty %}
+{% block title %}Fraud alerts{% endblock %}
+{% block content %}
+<div class="mb-3"><h1 class="page-title">Fraud alerts</h1>
+  <p class="page-sub">Created automatically for High and Critical risk results. {{ 'Review them and close them once investigated.' if current_user.is_admin else 'Only administrators can change alert status.' }}</p></div>
+<form class="card card-body mb-3" method="get"><div class="row g-2 align-items-end">
+  <div class="col-6 col-md-2"><label class="form-label" for="risk">Risk</label><select class="form-select" id="risk" name="risk"><option value="">All</option>
+    {% for r in ['Critical', 'High'] %}<option {{ 'selected' if r == risk_filter }}>{{ r }}</option>{% endfor %}</select></div>
+  <div class="col-6 col-md-2"><label class="form-label" for="status">Status</label><select class="form-select" id="status" name="status"><option value="">All</option>
+    {% for s in ['New', 'Reviewed', 'Closed'] %}<option {{ 'selected' if s == status }}>{{ s }}</option>{% endfor %}</select></div>
+  <div class="col-md-3"><label class="form-label" for="dataset">Dataset</label><select class="form-select" id="dataset" name="dataset"><option value="">All datasets</option>
+    {% for d in datasets %}<option value="{{ d.id }}" {{ 'selected' if d.id == ds_id }}>{{ d.dataset_name }}</option>{% endfor %}</select></div>
+  <div class="col-6 col-md-2"><label class="form-label" for="from">Created from</label><input class="form-control" type="date" id="from" name="from" value="{{ start }}"></div>
+  <div class="col-6 col-md-2"><label class="form-label" for="to">to</label><input class="form-control" type="date" id="to" name="to" value="{{ end }}"></div>
+  <div class="col-md-1 d-flex gap-2"><button class="btn btn-primary w-100" aria-label="Filter"><i class="bi bi-funnel"></i></button></div>
+</div></form>
+<div class="card">
+  {% if page.items %}
+  <div class="table-responsive"><table class="table table-hover">
+    <thead><tr><th>#</th><th>Created</th><th>Risk</th><th>Status</th><th>Transaction</th><th>Message</th><th></th></tr></thead>
+    <tbody>{% for al, a, t in page.items %}
+      <tr><td class="tabular">{{ al.id }}</td><td class="tabular">{{ al.created_date.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ risk(al.risk_level) }}</td><td>{{ pill(al.status) }}</td>
+        <td class="mono small">{{ t.transaction_reference }}</td><td class="small" style="max-width:460px">{{ al.alert_message }}</td>
+        <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('analysis.alert_detail', alert_id=al.id) }}">{{ 'Review' if current_user.is_admin else 'View' }}</a></td></tr>
+    {% endfor %}</tbody></table></div>
+  {{ pagination(page, 'analysis.alerts') }}
+  {% else %}{{ empty('bell-slash', 'No alerts match these filters.') }}{% endif %}
+</div>
+{% endblock %}

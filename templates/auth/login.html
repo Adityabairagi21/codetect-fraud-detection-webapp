@@ -1,0 +1,15 @@
+{% extends "auth/_layout.html" %}
+{% from "macros.html" import field %}
+{% block title %}Sign in{% endblock %}
+{% block form %}
+<h2 class="fw-bold mb-1">Sign in</h2>
+<p class="text-muted-2 mb-4">Administrators and financial analysts use the same sign-in.</p>
+<form method="post" novalidate>
+  {{ form.hidden_tag() }}
+  {{ field(form.email, "you@example.com") }}
+  {{ field(form.password) }}
+  <div class="form-check mb-3">{{ form.remember(class="form-check-input") }} {{ form.remember.label(class="form-check-label") }}</div>
+  {{ form.submit(class="btn btn-primary w-100 py-2") }}
+</form>
+<p class="mt-4 text-center notice">New analyst? <a href="{{ url_for('auth.register') }}">Create an account</a></p>
+{% endblock %}

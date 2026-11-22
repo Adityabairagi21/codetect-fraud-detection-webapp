@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, pill %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="mb-4"><h1 class="page-title">Profile</h1><p class="page-sub">Your account details.</p></div>
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card"><div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-5 text-muted-2 fw-normal">Email</dt><dd class="col-7">{{ current_user.email }}</dd>
+        <dt class="col-5 text-muted-2 fw-normal">Role</dt><dd class="col-7">{{ current_user.user_type }}</dd>
+        <dt class="col-5 text-muted-2 fw-normal">Status</dt><dd class="col-7">{{ pill(current_user.status) }}</dd>
+        <dt class="col-5 text-muted-2 fw-normal">Registered</dt><dd class="col-7">{{ current_user.registered_date.strftime('%d %b %Y') }}</dd>
+      </dl>
+    </div></div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card"><div class="card-header">Update profile</div><div class="card-body">
+      <form method="post" novalidate>{{ form.hidden_tag() }}
+        {{ field(form.name) }}{{ field(form.mobile_number, "", "Optional") }}
+        <div class="d-flex gap-2">{{ form.submit(class="btn btn-primary") }}
+          <a class="btn btn-outline-secondary" href="{{ url_for('auth.change_password') }}">Change password</a></div>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

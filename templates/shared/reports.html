@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "macros.html" import field, empty %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<div class="mb-4"><h1 class="page-title">Fraud analysis reports</h1><p class="page-sub">CSV and PDF reports built from the stored analysis records.</p></div>
+<div class="row g-4">
+  <div class="col-lg-4"><div class="card"><div class="card-header">Generate a report</div><div class="card-body">
+    <form method="post" novalidate data-busy="Generating…">{{ form.hidden_tag() }}{{ field(form.dataset_id) }}{{ field(form.report_format) }}
+      {{ form.submit(class="btn btn-primary w-100") }}</form>
+    <p class="notice mt-3 mb-0">Includes dataset details, totals, risk distribution, suspicious transactions with both models' scores,
+      top abnormal features, model name and analysis date.</p></div></div></div>
+  <div class="col-lg-8"><div class="card"><div class="card-header">{{ 'All generated reports' if current_user.is_admin else 'Your reports' }}</div>
+    {% if reports %}<div class="table-responsive"><table class="table table-hover">
+      <thead><tr><th>Generated</th><th>Dataset</th><th>Format</th><th>By</th><th></th></tr></thead>
+      <tbody>{% for r in reports %}<tr><td class="tabular">{{ r.generated_date.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ r.dataset.dataset_name if r.dataset else 'All datasets' }}</td><td><span class="badge text-bg-light">{{ r.report_format }}</span></td>
+        <td class="small">{{ r.author.name }}</td>
+        <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('analysis.download_report', report_id=r.id) }}"><i class="bi bi-download"></i> Download</a></td></tr>{% endfor %}</tbody></table></div>
+    {% else %}{{ empty('file-earmark', 'No reports generated yet.') }}{% endif %}</div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ ds.dataset_name }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+  <div><a class="notice" href="{{ url_for('analysis.datasets') }}"><i class="bi bi-arrow-left"></i> Datasets</a>
+    <h1 class="page-title mt-1">{{ ds.dataset_name }}</h1>
+    <p class="page-sub">{{ ds.source_name }} · uploaded {{ ds.uploaded_date.strftime('%Y-%m-%d %H:%M') }} by {{ ds.uploader.name }}</p></div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if current_user.is_admin %}
+    <form method="post" action="{{ url_for('admin.run_detection', dataset_id=ds.id) }}" data-busy="Scoring with both models…">{{ form.hidden_tag() }}
+      <button class="btn btn-primary" {{ 'disabled' if not model_status.ok }}><i class="bi bi-cpu me-1"></i>Run fraud detection</button></form>
+    {% endif %}
+    <a class="btn btn-outline-primary" href="{{ url_for('analysis.results', dataset_id=ds.id) }}">Results</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('analysis.transactions', dataset_id=ds.id) }}">Transactions</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('analysis.graph', dataset=ds.id) }}">Network</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('analysis.reports', dataset=ds.id) }}">Report</a>
+    {% if current_user.is_admin %}<button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal"><i class="bi bi-trash"></i></button>{% endif %}
+  </div>
+</div>
+<div class="row g-3 mb-4">
+  {% set tiles = [("Valid transactions", '{:,}'.format(stats.rows)), ("Period", (stats.first.strftime('%d %b %H:%M') ~ ' – ' ~ stats.last.strftime('%d %b %H:%M')) if stats.first else '—'),
+     ("Distinct senders / receivers", '{:,} / {:,}'.format(stats.senders, stats.receivers)),
+     ("Analysed · suspicious", '{:,} · {:,}'.format(summary.analyzed, summary.suspicious))] %}
+  {% for label, value in tiles %}<div class="col-6 col-xl-3"><div class="card stat-tile h-100"><div class="label">{{ label }}</div><div class="value tabular" style="font-size:1.25rem">{{ value }}</div></div></div>{% endfor %}
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-md-6"><div class="card h-100"><div class="card-header">Transaction types</div><div class="card-body"><table class="table table-sm">
+    <tbody>{% for k, v in stats.by_type|dictsort(by='value', reverse=true) %}<tr><td>{{ k }}</td><td class="text-end tabular">{{ '{:,}'.format(v) }}</td></tr>{% endfor %}</tbody></table></div></div></div>
+  <div class="col-md-6"><div class="card h-100"><div class="card-header">Payment currencies</div><div class="card-body"><table class="table table-sm">
+    <tbody>{% for k, v in stats.by_currency|dictsort(by='value', reverse=true) %}<tr><td>{{ k }}</td><td class="text-end tabular">{{ '{:,}'.format(v) }}</td></tr>{% endfor %}</tbody></table>
+    {% if stats.labelled_rows %}<p class="notice mb-0 mt-2">{{ '{:,}'.format(stats.labelled_laundering) }} of {{ '{:,}'.format(stats.labelled_rows) }} rows carry a laundering label (display / evaluation only).</p>{% endif %}</div></div></div>
+</div>
+<div class="card"><div class="card-header">Preview (first 15 transactions by time)</div>
+  <div class="table-responsive"><table class="table table-sm table-hover">
+    <thead><tr><th>Reference</th><th>Date</th><th>Sender</th><th>Receiver</th><th class="text-end">Amount</th><th>Currency</th><th>Type</th></tr></thead>
+    <tbody>{% for t in preview %}<tr><td class="mono"><a href="{{ url_for('analysis.transaction_detail', tx_id=t.id) }}">{{ t.transaction_reference }}</a></td>
+      <td class="tabular">{{ t.transaction_date.strftime('%Y-%m-%d %H:%M') }}</td><td class="mono small">{{ t.sender_id }}</td><td class="mono small">{{ t.receiver_id }}</td>
+      <td class="text-end tabular">{{ '{:,.2f}'.format(t.transaction_amount) }}</td><td>{{ t.payment_currency }}</td><td>{{ t.transaction_type }}</td></tr>{% endfor %}</tbody></table></div></div>
+
+{% if current_user.is_admin %}
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteTitle" aria-hidden="true"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h2 class="modal-title fs-5" id="deleteTitle">Delete dataset?</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+  <div class="modal-body">This permanently removes <strong>{{ ds.dataset_name }}</strong>, its {{ '{:,}'.format(ds.total_records) }} transactions and all their analyses.
+    It is refused while any alert from this dataset is still open.</div>
+  <div class="modal-footer"><button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+    <form method="post" action="{{ url_for('admin.delete_dataset', dataset_id=ds.id) }}">{{ form.hidden_tag() }}<button class="btn btn-danger">Delete dataset</button></form></div>
+</div></div></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "macros.html" import field %}
+{% block title %}Upload dataset{% endblock %}
+{% block content %}
+<div class="mb-4"><h1 class="page-title">Upload a financial dataset</h1>
+  <p class="page-sub">The file is validated with the same cleaning rules the models were trained with.</p></div>
+<div class="row g-4">
+  <div class="col-lg-7"><div class="card"><div class="card-body">
+    {% if result and not result.ok %}
+    <div class="alert alert-danger"><strong>The file was not accepted.</strong>
+      <ul class="mb-0 mt-1">{% for e in result.errors %}<li>{{ e }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" novalidate data-busy="Validating and storing…">{{ form.hidden_tag() }}
+      {{ field(form.dataset_name, "e.g. IBM test window 9 Sep 10:00–10:30") }}
+      {{ field(form.source_name) }}
+      {{ field(form.file, "", "CSV or Excel (.xlsx), up to %d MB and %s rows."|format(config.MAX_CONTENT_LENGTH // 1048576, '{:,}'.format(config.MAX_DATASET_ROWS))) }}
+      {{ form.submit(class="btn btn-primary") }}
+    </form>
+  </div></div></div>
+  <div class="col-lg-5"><div class="card"><div class="card-header">Expected format</div><div class="card-body">
+    <p class="small">{{ help }}</p>
+    <p class="small mb-2">Accepted header names are the raw IBM AML layout or the canonical names
+      (<span class="mono">timestamp, sender_bank, sender_account, …</span>). Bank codes are read as text, so leading zeros are kept.</p>
+    <p class="small mb-0"><strong>Sample files</strong> with real IBM rows from the evaluation period are in
+      <span class="mono">data/sample_uploads/</span>.</p>
+    <hr><p class="notice mb-0"><i class="bi bi-info-circle"></i> The <em>Is Laundering</em> column is optional. If present it is
+      stored for display and evaluation only and is never used as a model input.</p>
+  </div></div></div>
+</div>
+{% endblock %}

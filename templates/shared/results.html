@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "macros.html" import risk, pill, score, pagination, empty, chart %}
+{% block title %}Results · {{ ds.dataset_name }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+  <div><a class="notice" href="{{ url_for('analysis.dataset_detail', dataset_id=ds.id) }}"><i class="bi bi-arrow-left"></i> {{ ds.dataset_name }}</a>
+    <h1 class="page-title mt-1">Fraud detection results</h1>
+    <p class="page-sub">{{ '{:,}'.format(summary.analyzed) }} analysed · {{ '{:,}'.format(summary.suspicious) }} suspicious ({{ '%.2f'|format(summary.suspicious_share) }}%)</p></div>
+  <div class="d-flex gap-2"><a class="btn btn-outline-secondary" href="{{ url_for('analysis.graph', dataset=ds.id) }}"><i class="bi bi-diagram-3 me-1"></i>Suspicious network</a>
+    <a class="btn btn-primary" href="{{ url_for('analysis.reports', dataset=ds.id) }}"><i class="bi bi-file-earmark-arrow-down me-1"></i>Report</a></div>
+</div>
+{% if not summary.analyzed %}
+<div class="alert alert-info">This dataset has not been analysed yet.{% if current_user.is_admin %} Use <strong>Run fraud detection</strong> on the dataset page.{% endif %}</div>
+{% else %}
+<div class="row g-3 mb-4">
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Risk levels</div><div class="card-body">{{ chart(charts.risk, '', 240) }}</div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">Score distribution</div><div class="card-body">{{ chart(charts.scores, '', 240) }}</div></div></div>
+  <div class="col-12"><div class="card h-100"><div class="card-header">Top abnormal features among suspicious transactions</div><div class="card-body">{{ chart(charts.features, 'No suspicious transactions.', 300) }}</div></div></div>
+</div>
+{% if evaluation and evaluation.models %}
+<div class="card mb-4"><div class="card-header">Check against the dataset's laundering labels (labels are never model inputs)</div>
+  <div class="table-responsive"><table class="table table-sm">
+    <thead><tr><th>Model</th><th class="text-end">Average precision</th><th class="text-end">Flagged (score ≥ 97)</th><th class="text-end">Labelled laundering flagged</th><th class="text-end">Precision</th><th class="text-end">Recall</th></tr></thead>
+    <tbody>{% for m in evaluation.models %}<tr><td>{{ m.model }}</td><td class="text-end tabular">{{ '%.4f'|format(m.average_precision) }}</td>
+      <td class="text-end tabular">{{ '{:,}'.format(m.flagged) }}</td><td class="text-end tabular">{{ m.tp }} / {{ evaluation.positives }}</td>
+      <td class="text-end tabular">{{ '%.4f'|format(m.precision) }}</td><td class="text-end tabular">{{ '%.3f'|format(m.recall) }}</td></tr>{% endfor %}</tbody></table></div>
+  <div class="card-body pt-2 notice">Random ranking would give an average precision of about {{ '%.4f'|format(evaluation.prevalence) }} (the share of labelled laundering).</div></div>
+{% endif %}
+{% endif %}
+<div class="card">
+  <form class="card-header d-flex flex-wrap gap-2 align-items-center" method="get">
+    <span class="me-auto">Analysed transactions</span>
+    <select class="form-select form-select-sm w-auto" name="status" aria-label="Status"><option value="">All statuses</option>
+      {% for s in ['Suspicious', 'Normal'] %}<option {{ 'selected' if s == status }}>{{ s }}</option>{% endfor %}</select>
+    <select class="form-select form-select-sm w-auto" name="risk" aria-label="Risk level"><option value="">All risk levels</option>
+      {% for r in ['Critical', 'High', 'Medium', 'Low'] %}<option {{ 'selected' if r == risk_filter }}>{{ r }}</option>{% endfor %}</select>
+    <button class="btn btn-sm btn-primary">Apply</button>
+  </form>
+  {% if page.items %}
+  <div class="table-responsive"><table class="table table-hover">
+    <thead><tr><th>Reference</th><th>Date</th><th>Sender → receiver</th><th class="text-end">Amount</th><th>Transaction-only</th><th>Graph-enhanced</th><th>Risk</th><th>Top indicator</th><th></th></tr></thead>
+    <tbody>{% for a, t in page.items %}
+      <tr><td class="mono">{{ t.transaction_reference }}</td><td class="tabular">{{ t.transaction_date.strftime('%m-%d %H:%M') }}</td>
+        <td class="mono small">{{ t.sender_id }}<br>→ {{ t.receiver_id }}</td>
+        <td class="text-end tabular">{{ '{:,.2f}'.format(t.transaction_amount) }} <span class="notice">{{ t.payment_currency }}</span></td>
+        <td style="min-width:120px">{{ score(a.transaction_anomaly_score) }}</td><td style="min-width:120px">{{ score(a.graph_anomaly_score) }}</td>
+        <td>{{ risk(a.risk_level) }}</td>
+        <td class="small" style="max-width:280px">{{ a.features[0].description if a.features else '—' }}</td>
+        <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('analysis.transaction_detail', tx_id=t.id) }}">Open</a></td></tr>
+    {% endfor %}</tbody></table></div>
+  {{ pagination(page, 'analysis.results') }}
+  {% else %}{{ empty('funnel', 'No analysed transactions match these filters.') }}{% endif %}
+</div>
+{% endblock %}

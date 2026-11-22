@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+  <div><h1 class="page-title">Welcome, {{ current_user.name.split(' ')[0] }}</h1>
+    <p class="page-sub">Fraud analysis overview from stored model results.</p></div>
+  <div class="d-flex gap-2"><a class="btn btn-primary" href="{{ url_for('analysis.datasets') }}"><i class="bi bi-search me-1"></i>Analyse transactions</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('analysis.reports') }}"><i class="bi bi-file-earmark-arrow-down me-1"></i>Reports</a></div>
+</div>
+{% include "shared/_dashboard.html" %}
+{% endblock %}

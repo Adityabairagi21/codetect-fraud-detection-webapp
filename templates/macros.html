@@ -1,0 +1,51 @@
+{% macro risk(level) -%}
+<span class="risk risk-{{ level }}">{{ level }}</span>
+{%- endmacro %}
+
+{% macro pill(value) -%}
+<span class="pill pill-{{ value }}">{{ value }}</span>
+{%- endmacro %}
+
+{% macro score(value) -%}
+<div class="d-flex align-items-center gap-2"><span class="tabular fw-semibold" style="min-width:2.6rem">{{ '%.1f'|format(value) }}</span>
+<div class="score-bar flex-grow-1"><span style="width: {{ value }}%"></span></div></div>
+{%- endmacro %}
+
+{% macro field(f, placeholder='', help='') -%}
+<div class="mb-3">
+  {{ f.label(class="form-label") }}
+  {% set cls = "form-control" + (" is-invalid" if f.errors else "") %}
+  {% if f.type == "SelectField" %}{% set cls = "form-select" + (" is-invalid" if f.errors else "") %}{% endif %}
+  {{ f(class=cls, placeholder=placeholder, **({"aria-describedby": f.id ~ "-help"} if help else {})) }}
+  {% for e in f.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+  {% if help %}<div class="form-text" id="{{ f.id }}-help">{{ help }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro chart(spec, empty='No data yet.', height=280) -%}
+{% if spec %}<div class="chart" style="height: {{ height }}px" data-chart='{{ spec|tojson }}'></div>
+{% else %}<div class="chart-empty" style="min-height: {{ height }}px">{{ empty }}</div>{% endif %}
+{%- endmacro %}
+
+{% macro pagination(page, endpoint) -%}
+{% if page.pages > 1 %}
+<nav aria-label="Pagination" class="d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 border-top">
+  <span class="notice">Page {{ page.page }} of {{ page.pages }} · {{ '{:,}'.format(page.total) }} records</span>
+  <ul class="pagination pagination-sm mb-0">
+    {% set args = request.view_args.copy() %}{% set q = request.args.to_dict() %}
+    <li class="page-item {{ 'disabled' if not page.has_prev }}">
+      <a class="page-link" href="{{ url_for(endpoint, **dict(args, **dict(q, page=page.prev_num or 1))) }}">Previous</a></li>
+    {% for p in page.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}<li class="page-item {{ 'active' if p == page.page }}"><a class="page-link" href="{{ url_for(endpoint, **dict(args, **dict(q, page=p))) }}">{{ p }}</a></li>
+      {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+    {% endfor %}
+    <li class="page-item {{ 'disabled' if not page.has_next }}">
+      <a class="page-link" href="{{ url_for(endpoint, **dict(args, **dict(q, page=page.next_num or page.pages))) }}">Next</a></li>
+  </ul>
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro empty(icon, text) -%}
+<div class="empty-state"><i class="bi bi-{{ icon }}"></i>{{ text }}</div>
+{%- endmacro %}
